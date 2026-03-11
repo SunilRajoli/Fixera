@@ -34,6 +34,7 @@ router.get(
   adminController.getPayouts
 );
 
+router.get('/customers', adminController.getCustomers);
 router.get('/dashboard', adminController.getDashboardStats);
 
 router.get(
@@ -41,6 +42,7 @@ router.get(
   [
     query('page').optional().isInt({ gt: 0 }),
     query('limit').optional().isInt({ gt: 0, lt: 101 }),
+    query('search').optional().isString(),
   ],
   adminController.getTechnicianPerformance
 );

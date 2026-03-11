@@ -30,8 +30,9 @@ router.post(
       .bail()
       .custom((value) => {
         const date = new Date(value);
-        if (date <= new Date()) {
-          throw new Error('scheduledTime must be in the future');
+        const minFuture = new Date(Date.now() + 2 * 60 * 1000); // allow if at least 2 min from now
+        if (date <= minFuture) {
+          throw new Error('scheduledTime must be at least a few minutes in the future');
         }
         return true;
       }),
@@ -43,6 +44,11 @@ router.post(
   bookingController.createBooking
 );
 
+router.get(
+  '/',
+  authorize(UserRole.CUSTOMER, UserRole.TECHNICIAN, UserRole.ADMIN),
+  bookingController.getBookingList
+);
 router.get(
   '/:id',
   authorize(UserRole.CUSTOMER, UserRole.TECHNICIAN, UserRole.ADMIN),

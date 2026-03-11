@@ -73,6 +73,22 @@ export async function getAvailableSlots(
   });
 }
 
+/** Find one available slot for any technician on the given date and start time (e.g. "09:00"). Used by customers when creating a booking. */
+export async function findSlotForBooking(
+  date: string,
+  startTime: string
+): Promise<TimeSlot | null> {
+  const slot = await TimeSlot.findOne({
+    where: {
+      date,
+      start_time: startTime,
+      status: 'AVAILABLE',
+    },
+    order: [['created_at', 'ASC']],
+  });
+  return slot;
+}
+
 export async function reserveSlot(
   slotId: string,
   bookingId: string,

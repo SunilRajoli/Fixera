@@ -88,6 +88,44 @@ export async function createBooking(data: CreateBookingInput): Promise<Booking> 
   return booking!;
 }
 
+export async function getBookingList(
+  requesterId: string,
+  role: UserRole
+): Promise<Booking[]> {
+  const include: any[] = [
+    { association: 'service' as any },
+    { association: 'customer' },
+    {
+      association: 'job',
+      include: [{ association: 'technician', include: ['user'] }],
+    },
+    { association: 'slot' },
+  ];
+  if (role === UserRole.CUSTOMER) {
+    return Booking.findAll({
+      where: { customer_id: requesterId },
+      include,
+      order: [['scheduled_time', 'DESC']],
+    });
+  }
+  if (role === UserRole.TECHNICIAN) {
+    const technician = await Technician.findOne({ where: { user_id: requesterId } });
+    if (!technician) return [];
+    const jobs = await Job.findAll({ where: { technician_id: technician.id }, attributes: ['booking_id'] });
+    const bookingIds = jobs.map((j) => j.booking_id);
+    if (bookingIds.length === 0) return [];
+    return Booking.findAll({
+      where: { id: { [Op.in]: bookingIds } as any },
+      include,
+      order: [['scheduled_time', 'DESC']],
+    });
+  }
+  if (role === UserRole.ADMIN) {
+    return Booking.findAll({ include, order: [['scheduled_time', 'DESC']] });
+  }
+  return [];
+}
+
 export async function getBooking(
   bookingId: string,
   requesterId: string,

@@ -75,6 +75,21 @@ export async function getPayouts(
   }
 }
 
+export async function getCustomers(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const page = req.query.page ? Number(req.query.page) : 1;
+    const limit = req.query.limit ? Number(req.query.limit) : 20;
+    const data = await adminService.getCustomers(page, limit);
+    successResponse(res, data, 'Customers list');
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getDashboardStats(
   _req: Request,
   res: Response,
@@ -96,7 +111,8 @@ export async function getTechnicianPerformance(
   try {
     const page = req.query.page ? Number(req.query.page) : 1;
     const limit = req.query.limit ? Number(req.query.limit) : 20;
-    const data = await adminService.getTechnicianPerformance(page, limit);
+    const search = (req.query.search as string) || undefined;
+    const data = await adminService.getTechnicianPerformance(page, limit, search);
     successResponse(res, data, 'Technician performance');
   } catch (err) {
     next(err);

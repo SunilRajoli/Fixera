@@ -259,3 +259,27 @@ export async function getTechnicianJobs(
   return jobs;
 }
 
+export async function getJob(jobId: string, technicianUserId: string): Promise<Job> {
+  const technician = await Technician.findOne({ where: { user_id: technicianUserId } });
+  if (!technician) {
+    throw new AppError('Technician not found', 404, 'TECHNICIAN_NOT_FOUND');
+  }
+  const job = await Job.findByPk(jobId, {
+    where: { technician_id: technician.id },
+    include: [
+      {
+        association: 'booking',
+        include: [
+          { association: 'service' as any },
+          { association: 'customer' },
+          { association: 'slot' },
+        ],
+      },
+    ],
+  });
+  if (!job) {
+    throw new AppError('Job not found', 404, 'JOB_NOT_FOUND');
+  }
+  return job;
+}
+

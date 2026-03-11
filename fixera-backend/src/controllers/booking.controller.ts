@@ -58,6 +58,18 @@ export async function createBooking(
   }
 }
 
+export async function getBookingList(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user) {
+      throw new AppError('Authentication required', 401, 'AUTH_REQUIRED');
+    }
+    const bookings = await bookingService.getBookingList(req.user.userId, req.user.role);
+    successResponse(res, bookings, 'Bookings list');
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getBooking(
   req: Request,
   res: Response,

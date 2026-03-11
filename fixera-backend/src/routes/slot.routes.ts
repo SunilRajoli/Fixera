@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { param, body } from 'express-validator';
+import { param, body, query } from 'express-validator';
 import { authenticate } from '../middlewares/authenticate';
 import { authorize } from '../middlewares/authorize';
 import * as slotController from '../controllers/slot.controller';
@@ -8,6 +8,16 @@ import { UserRole } from '../types';
 const router = Router();
 
 router.use(authenticate);
+
+router.get(
+  '/for-booking',
+  authorize(UserRole.CUSTOMER),
+  [
+    query('date').matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('date must be YYYY-MM-DD'),
+    query('startTime').matches(/^\d{2}:\d{2}$/).withMessage('startTime must be HH:MM'),
+  ],
+  slotController.getSlotForBooking
+);
 
 router.get(
   '/:technicianId/:date',

@@ -10,6 +10,7 @@ import walletRouter from './routes/wallet.routes';
 import disputeRouter from './routes/dispute.routes';
 import reviewRouter from './routes/review.routes';
 import notificationRouter from './routes/notification.routes';
+import serviceRouter from './routes/service.routes';
 import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
@@ -32,6 +33,7 @@ app.use('/api/wallet', walletRouter);
 app.use('/api/disputes', disputeRouter);
 app.use('/api/reviews', reviewRouter);
 app.use('/api/notifications', notificationRouter);
+app.use('/api/services', serviceRouter);
 
 app.use(errorHandler);
 

@@ -106,7 +106,9 @@ export async function scoreAndRank(
     const distanceScore =
       distanceKm <= radiusKm
         ? Math.max(0, 1 - distanceKm / radiusKm)
-        : 0;
+        : loc
+          ? 0
+          : 0.5;
     if (distanceScore === 0) continue;
 
     const ratingScore = Math.min(1, Number(tech.rating || 0) / 5);

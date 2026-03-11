@@ -37,6 +37,12 @@ export async function sendOtp(phone: string): Promise<void> {
     expires_at: expiresAt,
   });
 
+  // Dev bypass — skip Twilio, log OTP to console (avoids US number → India SMS issues)
+  if (process.env.NODE_ENV === 'development') {
+    logger.info(`[DEV OTP] Phone: ${phone} | Code: ${code}`);
+    return;
+  }
+
   const shouldSendTwilio = !!twilioClient && !!process.env.TWILIO_PHONE_NUMBER;
 
   if (shouldSendTwilio) {
@@ -44,14 +50,14 @@ export async function sendOtp(phone: string): Promise<void> {
       await twilioClient!.messages.create({
         to: phone,
         from: process.env.TWILIO_PHONE_NUMBER as string,
-        body: `Your ServiceFlow OTP is ${code}. It expires in ${OTP_EXPIRY_MINUTES} minutes.`,
+        body: `Your Fixera OTP is ${code}. Valid for ${OTP_EXPIRY_MINUTES} minutes.`,
       });
       logger.info('OTP sent via Twilio', { phone });
     } catch (err) {
       logger.error('Failed to send OTP via Twilio', { phone, error: (err as Error).message });
     }
   } else {
-    logger.info('OTP generated (dev mode, not sent via SMS)', { phone, code });
+    logger.info('OTP generated (no Twilio config, not sent via SMS)', { phone, code });
   }
 }
 

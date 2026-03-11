@@ -10,6 +10,7 @@ router.use(authenticate);
 router.use(authorize(UserRole.TECHNICIAN));
 
 router.get('/', jobController.getTechnicianJobs);
+router.get('/:id', jobController.getJob);
 router.post('/:id/accept', jobController.acceptJob);
 router.post('/:id/reject', jobController.rejectJob);
 router.post('/:id/start-travel', jobController.startTravel);

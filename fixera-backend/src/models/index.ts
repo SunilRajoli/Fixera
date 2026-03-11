@@ -42,6 +42,9 @@ Service.belongsToMany(Technician, {
 Service.hasMany(RepairType, { foreignKey: 'service_id', as: 'repairTypes' });
 RepairType.belongsTo(Service, { foreignKey: 'service_id', as: 'service' });
 
+Service.hasMany(Booking, { foreignKey: 'service_id', as: 'bookings' });
+Booking.belongsTo(Service, { foreignKey: 'service_id', as: 'service' });
+
 Booking.hasOne(Job, { foreignKey: 'booking_id', as: 'job' });
 Job.belongsTo(Booking, { foreignKey: 'booking_id', as: 'booking' });
 

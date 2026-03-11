@@ -39,6 +39,18 @@ export async function getTechnicianJobs(
   }
 }
 
+export async function getJob(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user) {
+      throw new AppError('Authentication required', 401, 'AUTH_REQUIRED');
+    }
+    const job = await jobService.getJob(String(req.params.id), req.user.userId);
+    successResponse(res, job, 'Job details');
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function acceptJob(
   req: Request,
   res: Response,

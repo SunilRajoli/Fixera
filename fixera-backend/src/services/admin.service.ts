@@ -217,7 +217,8 @@ export async function getDashboardStats(): Promise<{
 
 export async function getTechnicianPerformance(
   page = 1,
-  limit = 20
+  limit = 20,
+  search?: string
 ): Promise<{
   technicians: Array<{
     id: string;
@@ -234,10 +235,24 @@ export async function getTechnicianPerformance(
   total: number;
 }> {
   const offset = (page - 1) * limit;
+  const term = search?.trim();
+  const userWhere =
+    term ?
+      {
+        [Op.or]: [
+          { name: { [Op.iLike]: `%${term}%` } },
+          { phone: { [Op.iLike]: `%${term}%` } },
+        ],
+      }
+    : undefined;
 
   const { rows, count } = await Technician.findAndCountAll({
     include: [
-      { association: 'user', attributes: ['name', 'phone'] },
+      {
+        association: 'user' as any,
+        attributes: ['name', 'phone'],
+        ...(userWhere ? { where: userWhere, required: true } : {}),
+      },
       { association: 'wallet', attributes: ['total_earned'] },
     ],
     order: [['rating', 'DESC']],
@@ -267,6 +282,25 @@ export async function getTechnicianPerformance(
   );
 
   return { technicians, total: count };
+}
+
+export async function getCustomers(
+  page = 1,
+  limit = 20
+): Promise<{ customers: User[]; total: number; pages: number }> {
+  const offset = (page - 1) * limit;
+  const { rows, count } = await User.findAndCountAll({
+    where: { role: UserRole.CUSTOMER },
+    attributes: ['id', 'name', 'phone', 'created_at', 'role'],
+    order: [['created_at', 'DESC']],
+    offset,
+    limit,
+  } as any);
+  return {
+    customers: rows,
+    total: count,
+    pages: Math.ceil(count / limit) || 1,
+  };
 }
 
 export async function verifyTechnician(
