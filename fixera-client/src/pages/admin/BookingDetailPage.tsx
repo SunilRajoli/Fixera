@@ -55,7 +55,7 @@ export default function AdminBookingDetail() {
     queryFn: async () => {
       const res = await api.get<{ data: { technicians: TechnicianOption[] } }>(
         '/api/admin/technicians',
-        { params: { limit: 5, search: assignSearchDeferred || undefined } }
+        { params: { limit: 5, search: assignSearchDeferred || undefined, onlineOnly: 'true' } }
       )
       return res.data.data
     },

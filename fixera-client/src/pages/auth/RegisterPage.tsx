@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import { OtpInput } from '@/components/shared/OtpInput'
 import api from '@/lib/api'
 import { useAuthStore } from '@/store/auth.store'
 import type { AuthUser } from '@/store/auth.store'
@@ -31,29 +32,6 @@ function normalizeUser(d: Record<string, unknown>): AuthUser {
     role: (d.role as AuthUser['role']) ?? 'CUSTOMER',
     email: d.email as string | undefined,
   }
-}
-
-function OtpInput({ value, onChange }: { value: string; onChange: (code: string) => void }) {
-  const digits = value.padEnd(6, ' ').slice(0, 6).split('')
-  const setDigit = (i: number, d: string) => {
-    const next = value.split('')
-    next[i] = d.replace(/\D/g, '').slice(-1) ?? ''
-    onChange(next.join('').slice(0, 6))
-  }
-  return (
-    <div className="mt-2 flex gap-2">
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <Input
-          key={i}
-          value={digits[i] === ' ' ? '' : digits[i]}
-          maxLength={1}
-          className="h-12 w-12 text-center text-lg"
-          onChange={(e) => setDigit(i, e.target.value)}
-          onKeyDown={(e) => e.key === 'Backspace' && !digits[i] && i > 0 && setDigit(i - 1, '')}
-        />
-      ))}
-    </div>
-  )
 }
 
 export default function RegisterPage() {

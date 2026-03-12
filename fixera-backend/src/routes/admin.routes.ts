@@ -43,6 +43,7 @@ router.get(
     query('page').optional().isInt({ gt: 0 }),
     query('limit').optional().isInt({ gt: 0, lt: 101 }),
     query('search').optional().isString(),
+    query('onlineOnly').optional().isIn(['true', 'false']),
   ],
   adminController.getTechnicianPerformance
 );

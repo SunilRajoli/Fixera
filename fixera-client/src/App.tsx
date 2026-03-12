@@ -11,6 +11,7 @@ const NewBookingPage = lazy(() => import('./pages/customer/NewBookingPage'))
 const BookingListPage = lazy(() => import('./pages/customer/BookingListPage'))
 const CustomerBookingDetail = lazy(() => import('./pages/customer/BookingDetailPage'))
 const TrackingPage = lazy(() => import('./pages/customer/TrackingPage'))
+const PaymentHistoryPage = lazy(() => import('./pages/customer/PaymentHistoryPage'))
 const CustomerProfile = lazy(() => import('./pages/customer/ProfilePage'))
 
 const TechnicianLayout = lazy(() => import('./components/layout/TechnicianLayout'))
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="/bookings/new" element={<NewBookingPage />} />
         <Route path="/bookings/:id" element={<CustomerBookingDetail />} />
         <Route path="/bookings/:id/track" element={<TrackingPage />} />
+        <Route path="/payments" element={<PaymentHistoryPage />} />
         <Route path="/profile" element={<CustomerProfile />} />
       </Route>
 

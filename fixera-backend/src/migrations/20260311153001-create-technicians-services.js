@@ -64,6 +64,7 @@ module.exports = {
         type: DataTypes.STRING,
         allowNull: true,
       },
+      // Technician availability: toggled by technician (on/off). Independent of users.is_active.
       is_online: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

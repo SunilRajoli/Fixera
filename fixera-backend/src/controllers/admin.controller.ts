@@ -112,7 +112,8 @@ export async function getTechnicianPerformance(
     const page = req.query.page ? Number(req.query.page) : 1;
     const limit = req.query.limit ? Number(req.query.limit) : 20;
     const search = (req.query.search as string) || undefined;
-    const data = await adminService.getTechnicianPerformance(page, limit, search);
+    const onlineOnly = req.query.onlineOnly === 'true';
+    const data = await adminService.getTechnicianPerformance(page, limit, search, onlineOnly);
     successResponse(res, data, 'Technician performance');
   } catch (err) {
     next(err);

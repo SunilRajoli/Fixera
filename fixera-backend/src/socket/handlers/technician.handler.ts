@@ -28,10 +28,7 @@ export function registerTechnicianHandlers(nsp: Namespace, socket: Socket): void
     technicianId = await getTechnicianId(userId);
     if (technicianId) {
       socket.join(`technician:${technicianId}`);
-      await Technician.update(
-        { is_online: true },
-        { where: { id: technicianId } }
-      );
+      // Do not set is_online here — leave it as stored. Technician toggles on/off via go-online/go-offline.
     }
   })();
 
@@ -241,10 +238,8 @@ export function registerTechnicianHandlers(nsp: Namespace, socket: Socket): void
   });
 
   socket.on('disconnect', async () => {
-    const tid = technicianId ?? (await getTechnicianId(userId));
-    if (tid) {
-      await Technician.update({ is_online: false }, { where: { id: tid } });
-    }
+    // Do not set is_online = false here — technician choice persists across tab switch / reconnect.
+    // Only go-offline and the toggle set offline.
     logger.info('Technician disconnected', { userId });
   });
 }

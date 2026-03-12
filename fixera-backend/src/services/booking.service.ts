@@ -153,9 +153,14 @@ export async function getBooking(
   }
 
   if (role === UserRole.TECHNICIAN) {
-    const job = await Job.findOne({ where: { booking_id: booking.id } });
     const technician = await Technician.findOne({ where: { user_id: requesterId } });
-    if (!job || !technician || job.technician_id !== technician.id) {
+    if (!technician) {
+      throw new AppError('Forbidden', 403, 'FORBIDDEN');
+    }
+    const job = await Job.findOne({
+      where: { booking_id: booking.id, technician_id: technician.id },
+    });
+    if (!job) {
       throw new AppError('Forbidden', 403, 'FORBIDDEN');
     }
   }
@@ -293,7 +298,7 @@ export async function confirmBooking(
 
 export async function submitRepairEstimate(
   bookingId: string,
-  technicianId: string,
+  technicianUserId: string,
   repairTypeId: string,
   repairCost: number
 ): Promise<Booking> {
@@ -302,8 +307,15 @@ export async function submitRepairEstimate(
     throw new AppError('Booking not found', 404, 'BOOKING_NOT_FOUND');
   }
 
-  const job = await Job.findOne({ where: { booking_id: bookingId } });
-  if (!job || job.technician_id !== technicianId) {
+  const technician = await Technician.findOne({ where: { user_id: technicianUserId } });
+  if (!technician) {
+    throw new AppError('Forbidden', 403, 'FORBIDDEN');
+  }
+
+  const job = await Job.findOne({
+    where: { booking_id: bookingId, technician_id: technician.id },
+  });
+  if (!job) {
     throw new AppError('Forbidden', 403, 'FORBIDDEN');
   }
 

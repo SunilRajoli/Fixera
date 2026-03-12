@@ -264,8 +264,8 @@ export async function getJob(jobId: string, technicianUserId: string): Promise<J
   if (!technician) {
     throw new AppError('Technician not found', 404, 'TECHNICIAN_NOT_FOUND');
   }
-  const job = await Job.findByPk(jobId, {
-    where: { technician_id: technician.id },
+  const job = await Job.findOne({
+    where: { id: jobId, technician_id: technician.id },
     include: [
       {
         association: 'booking',

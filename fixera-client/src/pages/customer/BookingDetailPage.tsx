@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
 import { ErrorMessage } from '@/components/shared/ErrorMessage'
+import { PaymentSheet } from '@/components/payment/PaymentSheet'
+import { InvoiceViewer } from '@/components/payment/InvoiceViewer'
 import {
   Dialog,
   DialogContent,
@@ -22,7 +24,7 @@ import { useToastStore } from '@/store/toast.store'
 import { format } from 'date-fns'
 import { BookingStatus } from '@/types'
 import type { Booking } from '@/types'
-import { Phone, MapPin, Star } from 'lucide-react'
+import { Phone, MapPin, Star, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const STEPS = ['Pending', 'Matching', 'Assigned', 'Accepted', 'On the way', 'In progress', 'Completed', 'Confirmed', 'Closed']
@@ -53,6 +55,8 @@ export default function CustomerBookingDetail() {
   const [reviewComment, setReviewComment] = useState('')
   const [disputeOpen, setDisputeOpen] = useState(false)
   const [disputeReason, setDisputeReason] = useState('')
+  const [paymentSheetOpen, setPaymentSheetOpen] = useState(false)
+  const [paymentSheetType, setPaymentSheetType] = useState<'inspection' | 'repair'>('inspection')
 
   const { data: booking, isLoading, error, refetch } = useQuery({
     queryKey: ['booking', id],
@@ -132,8 +136,17 @@ export default function CustomerBookingDetail() {
   const inspectionFee = Number(booking.inspectionFee ?? 0)
   const repairCost = Number(booking.repairCost ?? 0)
   const gst = repairCost * 0.18
+  const repairTotal = Math.round(repairCost + gst)
   const total = inspectionFee + repairCost + gst
   const inDisputeWindow = booking.disputeWindowEnd && new Date(booking.disputeWindowEnd) > new Date()
+  const inspectionPaid = !!booking.payment && (booking.payment as { status?: string }).status === 'CAPTURED'
+  const showInspectionPay =
+    (status === BookingStatus.ACCEPTED || status === BookingStatus.ON_THE_WAY) &&
+    !inspectionPaid &&
+    inspectionFee > 0
+  // Backend allows repair payment only when booking reaches PAYMENT_HELD
+  const showRepairPay = status === BookingStatus.PAYMENT_HELD && repairCost > 0
+  const bookingWithRepairType = booking as { repairType?: { name?: string } }
 
   return (
     <div className="space-y-6 p-4 pb-24">
@@ -173,6 +186,73 @@ export default function CustomerBookingDetail() {
           <p className="text-sm">{format(new Date(booking.scheduledTime), 'dd MMM yyyy, hh:mm a')}</p>
         </CardHeader>
       </Card>
+
+      {showInspectionPay && (
+        <div className="rounded-lg border border-amber-500/50 bg-amber-50 p-4 text-amber-800">
+          <p className="flex items-center gap-2 font-medium">
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+            Pay inspection fee to confirm your booking
+          </p>
+          <Button
+            className="mt-3 w-full"
+            onClick={() => {
+              setPaymentSheetType('inspection')
+              setPaymentSheetOpen(true)
+            }}
+          >
+            Pay ₹{inspectionFee.toLocaleString('en-IN')} Inspection Fee
+          </Button>
+        </div>
+      )}
+
+      {showRepairPay && (
+        <Card>
+          <CardHeader className="pb-2">
+            <h3 className="font-medium">Repair Estimate</h3>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {bookingWithRepairType.repairType?.name && (
+              <p className="text-sm text-muted-foreground">
+                {bookingWithRepairType.repairType.name}
+              </p>
+            )}
+            <div className="space-y-1 text-sm">
+              <p className="flex justify-between">
+                <span className="text-muted-foreground">Service charge:</span>
+                <span>₹{repairCost.toLocaleString('en-IN')}</span>
+              </p>
+              <p className="flex justify-between">
+                <span className="text-muted-foreground">GST (18%):</span>
+                <span>₹{gst.toLocaleString('en-IN')}</span>
+              </p>
+              <p className="flex justify-between font-medium">
+                <span>Total:</span>
+                <span>₹{repairTotal.toLocaleString('en-IN')}</span>
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  setPaymentSheetType('repair')
+                  setPaymentSheetOpen(true)
+                }}
+              >
+                Approve & Pay ₹{repairTotal.toLocaleString('en-IN')}
+              </Button>
+              <Button variant="outline" className="flex-1" disabled>
+                Decline Estimate
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {canConfirm && (
+        <div className="rounded-lg border border-green-500/50 bg-green-50 p-4 text-green-800">
+          <p className="font-medium">✓ Payment received. Confirm when job is complete.</p>
+        </div>
+      )}
 
       {tech && status >= BookingStatus.ACCEPTED && (
         <Card>
@@ -343,6 +423,37 @@ export default function CustomerBookingDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PaymentSheet
+        isOpen={paymentSheetOpen}
+        onClose={() => setPaymentSheetOpen(false)}
+        amount={paymentSheetType === 'inspection' ? inspectionFee : repairTotal}
+        gstAmount={paymentSheetType === 'repair' ? gst : undefined}
+        baseAmount={paymentSheetType === 'repair' ? repairCost : undefined}
+        type={paymentSheetType}
+        bookingId={id!}
+        onSuccess={() => {
+          refetch()
+        }}
+      />
+
+      {booking.invoice && (
+        <Card>
+          <CardHeader className="pb-2">
+            <h3 className="font-medium">Invoice</h3>
+          </CardHeader>
+          <CardContent>
+            <InvoiceViewer
+              bookingId={id!}
+              invoice={booking.invoice}
+              customerName={user?.name}
+              address={booking.address}
+              serviceName={booking.service?.name}
+              technicianName={job?.technician?.user?.name}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

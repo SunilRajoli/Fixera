@@ -1,6 +1,6 @@
 import { Op, Transaction as SequelizeTransaction } from 'sequelize';
 import sequelize from '../config/sequelize';
-import { Booking, Job, Technician, Payout, User, Wallet, Payment, Transaction } from '../models';
+import { Booking, Job, Technician, Payout, User, Wallet, Payment, Transaction, Invoice } from '../models';
 import {
   VerificationStatus,
   BookingStatus,
@@ -155,7 +155,7 @@ export async function getDashboardStats(): Promise<{
     Booking.count({ where: { status: BookingStatus.FAILED } }),
     Booking.count({ where: { status: BookingStatus.DISPUTED } }),
     Payment.sum('amount', { where: { status: 'CAPTURED' } as any }),
-    Transaction.sum('amount', { where: { type: TransactionType.COMMISSION } as any }),
+    Invoice.sum('platform_commission', { where: { status: 'ISSUED' } as any }),
     Payout.sum('amount', { where: { status: PayoutStatus.PROCESSED } as any }),
     Payout.sum('amount', { where: { status: PayoutStatus.PENDING } as any }),
     Technician.count(),
@@ -218,7 +218,8 @@ export async function getDashboardStats(): Promise<{
 export async function getTechnicianPerformance(
   page = 1,
   limit = 20,
-  search?: string
+  search?: string,
+  onlineOnly?: boolean
 ): Promise<{
   technicians: Array<{
     id: string;
@@ -246,7 +247,10 @@ export async function getTechnicianPerformance(
       }
     : undefined;
 
+  const technicianWhere = onlineOnly ? { is_online: true } : {};
+
   const { rows, count } = await Technician.findAndCountAll({
+    where: technicianWhere,
     include: [
       {
         association: 'user' as any,
@@ -277,6 +281,7 @@ export async function getTechnicianPerformance(
         totalEarned: Number(tech.wallet?.total_earned) || 0,
         city: tech.city,
         verification_status: tech.verification_status,
+        isOnline: Boolean(tech.is_online),
       };
     })
   );

@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { JobStatusStepper } from '@/components/technician/JobStatusStepper'
 import { LocationTracker } from '@/components/technician/LocationTracker'
+import { MapView } from '@/components/shared/MapView'
+import { useGeolocation } from '@/hooks/useGeolocation'
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
 import { ErrorMessage } from '@/components/shared/ErrorMessage'
 import {
@@ -21,15 +23,16 @@ import { Input } from '@/components/ui/input'
 import { useToastStore } from '@/store/toast.store'
 import { BookingStatus } from '@/types'
 import type { Job } from '@/types'
-import type { RepairType } from '@/types'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Phone, MapPin, AlertTriangle } from 'lucide-react'
+import { Phone, MapPin, AlertTriangle, ExternalLink } from 'lucide-react'
 interface JobWithBooking extends Job {
   booking?: {
     id: string
     status: string
     scheduledTime: string
     address?: string
+    latitude?: string | number
+    longitude?: string | number
     repairCost?: number
     repairTypeId?: string
     service?: { id: string; name: string }
@@ -47,6 +50,7 @@ export default function JobDetailPage() {
   const [estimateOpen, setEstimateOpen] = useState(false)
   const [repairTypeId, setRepairTypeId] = useState('')
   const [repairCost, setRepairCost] = useState('')
+  const [etaMinutes, setEtaMinutes] = useState<number | null>(null)
 
   const { data: job, isLoading, error, refetch } = useQuery({
     queryKey: ['job', id],
@@ -58,15 +62,26 @@ export default function JobDetailPage() {
   })
 
   const booking = job?.booking
+  const showMapForGeo =
+    !!booking &&
+    ['ACCEPTED', 'ON_THE_WAY', 'IN_PROGRESS'].includes(booking.status)
+  const geo = useGeolocation(!!id && showMapForGeo && !!booking?.id)
+
   const serviceId = booking?.service?.id
-  const { data: repairTypes = [] } = useQuery({
+  const { data: repairTypesRaw = [] } = useQuery({
     queryKey: ['repair-types', serviceId],
     queryFn: async () => {
-      const res = await api.get<{ data: RepairType[] }>('/api/services/repair-types', { params: { serviceId } })
+      const res = await api.get<{ data: Record<string, unknown>[] }>('/api/services/repair-types', { params: { serviceId } })
       return res.data.data ?? []
     },
     enabled: !!serviceId,
   })
+  const repairTypes = repairTypesRaw.map((t) => ({
+    id: String(t.id),
+    name: String(t.name ?? ''),
+    minPrice: Number(t.minPrice ?? t.min_price ?? 0),
+    maxPrice: Number(t.maxPrice ?? t.max_price ?? 0),
+  }))
 
   useEffect(() => {
     if (!socket || !booking?.id) return
@@ -121,6 +136,12 @@ export default function JobDetailPage() {
 
   const status = (booking?.status as BookingStatus) ?? BookingStatus.ASSIGNED
   const isOnTheWay = status === BookingStatus.ON_THE_WAY
+  const showMap =
+    status === BookingStatus.ACCEPTED ||
+    status === BookingStatus.ON_THE_WAY ||
+    status === BookingStatus.IN_PROGRESS
+  const hasCustomerCoords =
+    Number.isFinite(Number(booking?.latitude)) && Number.isFinite(Number(booking?.longitude))
   const repairCostNum = Number(booking?.repairCost ?? 0)
   const commission = repairCostNum * 0.15
   const payout = repairCostNum - commission
@@ -154,8 +175,45 @@ export default function JobDetailPage() {
 
       <JobStatusStepper currentStatus={status} />
 
-      {isOnTheWay && booking?.id && (
-        <LocationTracker bookingId={booking.id} active={true} />
+      {(status === BookingStatus.ACCEPTED || isOnTheWay) && booking?.id && (
+        <LocationTracker bookingId={booking.id} active={isOnTheWay} />
+      )}
+      {showMap && hasCustomerCoords && (
+        <Card>
+          <CardHeader className="pb-2">
+            <h3 className="font-medium">📍 Customer Location</h3>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <MapView
+              technicianLocation={
+                geo?.latitude != null && geo?.longitude != null
+                  ? { latitude: geo.latitude, longitude: geo.longitude }
+                  : null
+              }
+              customerLocation={{
+                latitude: Number(booking!.latitude),
+                longitude: Number(booking!.longitude),
+              }}
+              showRoute={true}
+              height="200px"
+              eta={etaMinutes}
+              onEtaUpdate={setEtaMinutes}
+            />
+            {etaMinutes != null && (
+              <p className="text-sm text-muted-foreground">ETA: ~{etaMinutes} min away</p>
+            )}
+            {geo?.latitude != null && geo?.longitude != null && (
+              <a
+                href={`https://www.google.com/maps/dir/${geo.latitude},${geo.longitude}/${Number(booking!.latitude)},${Number(booking!.longitude)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+              >
+                Open in Google Maps <ExternalLink className="h-4 w-4" />
+              </a>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       <div className="space-y-2">
@@ -214,10 +272,11 @@ export default function JobDetailPage() {
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setEstimateOpen(false)}>Cancel</Button>
+                      <Button variant="outline" type="button" onClick={() => setEstimateOpen(false)}>Cancel</Button>
                       <Button
+                        type="button"
                         onClick={() => estimateMutation.mutate({ repairTypeId, repairCost: Number(repairCost) })}
-                        disabled={!repairTypeId || !repairCost || repairCost === '0'}
+                        disabled={!repairTypeId || !repairCost.trim() || Number(repairCost) <= 0}
                       >
                         Submit
                       </Button>

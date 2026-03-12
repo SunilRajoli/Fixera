@@ -2,6 +2,12 @@ import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config/sequelize';
 import { VerificationStatus } from '../types';
 
+/**
+ * Technician profile (linked to User).
+ * - is_online: Technician's choice to be available for jobs. Toggled by the technician (on/off).
+ *   Used for matching and admin assign dropdown. Distinct from User.is_active (account active,
+ *   admin-only; when false the account is deactivated).
+ */
 interface TechnicianAttributes {
   id: string;
   user_id: string;
@@ -15,6 +21,7 @@ interface TechnicianAttributes {
   id_proof_url?: string | null;
   certification_url?: string | null;
   photo_url?: string | null;
+  /** Technician availability: true = accepting jobs, false = offline. User toggles this. */
   is_online: boolean;
   max_jobs_per_slot: number;
   working_hours_start: string;
@@ -168,6 +175,7 @@ Technician.init(
     indexes: [
       { fields: ['verification_status'] },
       { fields: ['city'] },
+      { fields: ['is_online'] },
     ],
   }
 );

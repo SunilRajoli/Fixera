@@ -17,6 +17,7 @@ interface TechItem {
   totalEarned: number
   city: string
   verificationStatus: string
+  isOnline?: boolean
 }
 
 export default function AdminTechnicianList() {
@@ -46,6 +47,7 @@ export default function AdminTechnicianList() {
               <th className="p-2 text-left">Rating</th>
               <th className="p-2 text-left">Jobs</th>
               <th className="p-2 text-left">Acceptance</th>
+              <th className="p-2 text-left">Online</th>
               <th className="p-2 text-left">Status</th>
               <th className="p-2 text-left">Actions</th>
             </tr>
@@ -59,6 +61,14 @@ export default function AdminTechnicianList() {
                 <td className="p-2">{Number(t.rating).toFixed(1)}</td>
                 <td className="p-2">{t.completedJobs} / {t.totalJobs}</td>
                 <td className="p-2">{(Number(t.acceptanceRate) * 100).toFixed(0)}%</td>
+                <td className="p-2">
+                  <span className={cn(
+                    'rounded px-2 py-0.5 text-xs',
+                    t.isOnline ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                  )}>
+                    {t.isOnline ? 'Online' : 'Offline'}
+                  </span>
+                </td>
                 <td className="p-2">
                   <span className={cn(
                     'rounded px-2 py-0.5 text-xs',

@@ -7,35 +7,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import { OtpInput } from '@/components/shared/OtpInput'
 import api from '@/lib/api'
 import { useAuthStore } from '@/store/auth.store'
 import type { AuthUser } from '@/store/auth.store'
 
 const phoneSchema = z.object({ phone: z.string().min(10, 'Valid phone required') })
 const codeSchema = z.object({ code: z.string().min(6, 'Enter 6 digits').max(6, 'Enter 6 digits') })
-
-function OtpInput({ value, onChange }: { value: string; onChange: (code: string) => void }) {
-  const digits = value.padEnd(6, ' ').slice(0, 6).split('')
-  const setDigit = (i: number, d: string) => {
-    const next = value.split('')
-    next[i] = d.replace(/\D/g, '').slice(-1) ?? ''
-    onChange(next.join('').slice(0, 6))
-  }
-  return (
-    <div className="mt-2 flex gap-2">
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <Input
-          key={i}
-          value={digits[i] === ' ' ? '' : digits[i]}
-          maxLength={1}
-          className="h-12 w-12 text-center text-lg"
-          onChange={(e) => setDigit(i, e.target.value)}
-          onKeyDown={(e) => e.key === 'Backspace' && !digits[i] && i > 0 && setDigit(i - 1, '')}
-        />
-      ))}
-    </div>
-  )
-}
 
 type PhoneForm = z.infer<typeof phoneSchema>
 type CodeForm = z.infer<typeof codeSchema>

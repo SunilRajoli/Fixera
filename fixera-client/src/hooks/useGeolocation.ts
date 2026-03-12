@@ -1,53 +1,40 @@
-import { useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 
-interface GeolocationState {
-  latitude: number | null
-  longitude: number | null
+export interface GeolocationState {
+  latitude: number
+  longitude: number
   error: string | null
-  loading: boolean
 }
 
-export function useGeolocation() {
-  const [state, setState] = useState<GeolocationState>({
-    latitude: null,
-    longitude: null,
-    error: null,
-    loading: false,
-  })
+/**
+ * Watch technician's current position (for JobDetailPage map).
+ * Updates when position changes.
+ */
+export function useGeolocation(enabled: boolean): GeolocationState | null {
+  const [state, setState] = useState<GeolocationState | null>(null)
 
-  const getCurrentPosition = useCallback(() => {
-    if (!navigator.geolocation) {
-      setState((s) => ({
-        ...s,
-        error: 'Geolocation is not supported',
-        loading: false,
-      }))
+  useEffect(() => {
+    if (!enabled || typeof navigator === 'undefined' || !navigator.geolocation) {
+      setState(null)
       return
     }
-    setState((s) => ({ ...s, loading: true, error: null }))
-    navigator.geolocation.getCurrentPosition(
+    const id = navigator.geolocation.watchPosition(
       (pos) => {
         setState({
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
           error: null,
-          loading: false,
         })
       },
-      (err) => {
-        setState({
-          latitude: null,
-          longitude: null,
-          error: err.message || 'Permission denied',
-          loading: false,
-        })
+      () => {
+        setState((prev) =>
+          prev ? { ...prev, error: 'Enable location to see your position on map' } : null
+        )
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, maximumAge: 15000, timeout: 10000 }
     )
-  }, [])
+    return () => navigator.geolocation.clearWatch(id)
+  }, [enabled])
 
-  return {
-    ...state,
-    getCurrentPosition,
-  }
+  return state
 }

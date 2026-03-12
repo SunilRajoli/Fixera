@@ -65,7 +65,7 @@ export default function CustomerHome() {
         ) : servicesError ? (
           <ErrorMessage message={(servicesError as Error).message} />
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             {services.map((s) => (
               <Link
                 key={s.id}

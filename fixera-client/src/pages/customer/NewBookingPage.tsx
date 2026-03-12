@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { ServiceSelector } from '@/components/customer/ServiceSelector'
 import { SlotPicker } from '@/components/customer/SlotPicker'
 import { Progress } from '@/components/ui/progress'
-import { useGeolocation } from '@/hooks/useGeolocation'
+import { useBookingGeolocation } from '@/hooks/useBookingGeolocation'
 import { useToastStore } from '@/store/toast.store'
 import { PaymentMethod } from '@/types'
 import type { Service } from '@/types'
@@ -37,7 +37,7 @@ export default function NewBookingPage() {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
   const navigate = useNavigate()
   const toast = useToastStore()
-  const { latitude, longitude, getCurrentPosition, loading: geoLoading } = useGeolocation()
+  const { latitude, longitude, getCurrentPosition, loading: geoLoading } = useBookingGeolocation()
 
   const { data: services = [] } = useQuery({
     queryKey: ['services'],

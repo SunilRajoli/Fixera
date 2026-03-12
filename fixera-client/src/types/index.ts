@@ -49,6 +49,8 @@ export interface Booking {
   status: BookingStatus
   description: string
   address: string
+  latitude?: string | number
+  longitude?: string | number
   scheduledTime: string
   inspectionFee?: number
   repairCost?: number

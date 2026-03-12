@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth.store'
 import { useSocket } from '@/hooks/useSocket'
 import api from '@/lib/api'
@@ -27,12 +27,46 @@ interface JobWithBooking extends Job {
 
 export default function TechnicianDashboard() {
   const { user } = useAuthStore()
+  const queryClient = useQueryClient()
   const { socket, isConnected } = useSocket()
-  const [isOnline, setIsOnline] = useState(false)
+
+  const { data: me, refetch: refetchMe } = useQuery({
+    queryKey: ['me'],
+    queryFn: async () => {
+      const res = await api.get<{ data: { technicianProfile?: { isOnline?: boolean } } }>('/api/auth/me')
+      return res.data.data
+    },
+    enabled: !!user,
+    refetchOnMount: 'always',
+    staleTime: 0,
+  })
+
+  const isOnline = !!me?.technicianProfile?.isOnline
 
   useEffect(() => {
-    setIsOnline(isConnected)
-  }, [isConnected])
+    if (!socket) return
+    const onStatus = (payload: { isOnline?: boolean }) => {
+      queryClient.setQueryData(['me'], (old: { technicianProfile?: { isOnline?: boolean } } | undefined) =>
+        old
+          ? { ...old, technicianProfile: { ...old.technicianProfile, isOnline: payload.isOnline } }
+          : old
+      )
+    }
+    socket.on('technician:status', onStatus)
+    return () => { socket.off('technician:status', onStatus) }
+  }, [socket, queryClient])
+
+  useEffect(() => {
+    if (isConnected) void refetchMe()
+  }, [isConnected, refetchMe])
+
+  useEffect(() => {
+    if (!isConnected) {
+      queryClient.setQueryData(['me'], (old: { technicianProfile?: { isOnline?: boolean } } | undefined) =>
+        old ? { ...old, technicianProfile: { ...old.technicianProfile, isOnline: false } } : old
+      )
+    }
+  }, [isConnected, queryClient])
 
   const { data: jobs = [], isLoading, error, refetch } = useQuery({
     queryKey: ['jobs', 'today'],
@@ -43,8 +77,11 @@ export default function TechnicianDashboard() {
   })
 
   const handleOnlineToggle = (on: boolean) => {
-    setIsOnline(on)
+    queryClient.setQueryData(['me'], (old: { technicianProfile?: { isOnline?: boolean } } | undefined) =>
+      old ? { ...old, technicianProfile: { ...old.technicianProfile, isOnline: on } } : old
+    )
     if (socket) socket.emit(on ? 'technician:go-online' : 'technician:go-offline')
+    queryClient.invalidateQueries({ queryKey: ['me'] })
   }
 
   const completedToday = jobs.filter(

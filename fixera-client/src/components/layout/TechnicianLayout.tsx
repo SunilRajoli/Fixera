@@ -4,10 +4,11 @@ import { useAuthStore } from '@/store/auth.store'
 import { useJobStore } from '@/store/job.store'
 import { useSocket } from '@/hooks/useSocket'
 import { ProtectedRoute } from '@/components/shared/ProtectedRoute'
+import { TechnicianSidebar } from '@/components/technician/TechnicianSidebar'
 import { NotificationBell } from '@/components/shared/NotificationBell'
-import { LayoutDashboard, Briefcase, Wallet, User } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { Toaster } from '@/components/ui/toaster'
+import { Button } from '@/components/ui/button'
+import { LogOut } from 'lucide-react'
 import { IncomingJobAlert } from '@/components/technician/IncomingJobAlert'
 
 function RoleGuard({ children }: { children: React.ReactNode }) {
@@ -21,16 +22,10 @@ function RoleGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-const navItems = [
-  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/jobs', label: 'Jobs', icon: Briefcase },
-  { path: '/earnings', label: 'Earnings', icon: Wallet },
-  { path: '/technician/profile', label: 'Profile', icon: User },
-]
-
 export default function TechnicianLayout() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { user, clearAuth } = useAuthStore()
   const { socket } = useSocket()
   const setIncomingJob = useJobStore((s) => s.setIncomingJob)
 
@@ -50,41 +45,42 @@ export default function TechnicianLayout() {
     return () => { socket.off('job:new-assignment', onAssignment) }
   }, [socket, setIncomingJob])
 
+  const handleLogout = () => {
+    clearAuth()
+    navigate('/login')
+  }
+
+  const pageTitle = (() => {
+    const path = location.pathname
+    if (path === '/dashboard') return 'Dashboard'
+    if (path === '/jobs') return 'Jobs'
+    if (path.startsWith('/jobs/')) return 'Job detail'
+    if (path === '/earnings') return 'Earnings'
+    if (path === '/technician/profile') return 'Profile'
+    return 'Technician'
+  })()
+
   return (
     <ProtectedRoute>
       <RoleGuard>
-        <div className="flex min-h-screen flex-col bg-background">
-          <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b bg-card px-4">
-            <span className="text-xl font-bold">
-              <span className="text-primary">fix</span>
-              <span className="text-slate-700">era</span>
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-green-500" title="Online" />
-              <NotificationBell />
-            </div>
-          </header>
-          <main className="flex-1 overflow-auto pb-20">
-            <Outlet />
-          </main>
-          <nav className="fixed bottom-0 left-0 right-0 flex border-t bg-card">
-            {navItems.map(({ path, label, icon: Icon }) => (
-              <button
-                key={path}
-                type="button"
-                onClick={() => navigate(path)}
-                className={cn(
-                  'flex flex-1 flex-col items-center gap-1 py-3 text-xs',
-                  location.pathname === path
-                    ? 'text-primary font-medium'
-                    : 'text-muted-foreground'
-                )}
-              >
-                <Icon className="h-5 w-5" />
-                {label}
-              </button>
-            ))}
-          </nav>
+        <div className="flex min-h-screen bg-background">
+          <TechnicianSidebar />
+          <div className="flex flex-1 flex-col">
+            <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-6">
+              <h1 className="text-lg font-semibold">{pageTitle}</h1>
+              <div className="flex items-center gap-4">
+                <span className="h-2 w-2 rounded-full bg-green-500" title="Status" />
+                <NotificationBell />
+                <span className="text-sm text-muted-foreground">{user?.name}</span>
+                <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Logout">
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            </header>
+            <main className="flex-1 overflow-auto p-6">
+              <Outlet />
+            </main>
+          </div>
         </div>
         <IncomingJobAlert />
         <Toaster />

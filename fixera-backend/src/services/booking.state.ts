@@ -24,8 +24,14 @@ import { addFundReleaseJob } from '../queues/fundRelease.queue';
 import { generateInvoice } from '../services/payment.service';
 import { createNotification } from './notification.service';
 
-const HOURS_48 = 48 * 60 * 60 * 1000;
-const HOURS_72 = 72 * 60 * 60 * 1000;
+function hoursToMs(hours: number): number {
+  return Math.max(0, hours) * 60 * 60 * 1000;
+}
+
+// Configurable timings (defaults keep existing behavior)
+const AUTO_CONFIRM_MS = hoursToMs(Number(process.env.AUTO_CONFIRM_HOURS || '48'));
+const DISPUTE_WINDOW_MS = hoursToMs(Number(process.env.DISPUTE_WINDOW_HOURS || '72'));
+const WITHDRAWAL_LOCK_MS = hoursToMs(Number(process.env.WITHDRAWAL_LOCK_HOURS || '72'));
 
 export async function updateBookingStatus(
   bookingId: string,
@@ -79,9 +85,11 @@ export async function updateBookingStatus(
       await job.save(opts as any);
     }
 
-    const autoConfirmAt = new Date(now.getTime() + HOURS_48);
+    const autoConfirmAt = new Date(now.getTime() + AUTO_CONFIRM_MS);
     booking.auto_confirm_at = autoConfirmAt;
-    booking.dispute_window_end = new Date(now.getTime() + HOURS_48 + HOURS_72);
+    booking.dispute_window_end = new Date(
+      now.getTime() + AUTO_CONFIRM_MS + DISPUTE_WINDOW_MS
+    );
 
     const jobForTech = await Job.findOne({ where: { booking_id: booking.id }, ...opts });
     if (jobForTech) {
@@ -102,7 +110,7 @@ export async function updateBookingStatus(
   }
 
   if (newStatus === BookingStatus.CONFIRMED) {
-    booking.dispute_window_end = new Date(now.getTime() + HOURS_72);
+    booking.dispute_window_end = new Date(now.getTime() + DISPUTE_WINDOW_MS);
 
     if (!booking.repair_cost) {
       throw new AppError('Repair cost not set for confirmation', 400, 'MISSING_REPAIR_COST');
@@ -131,7 +139,7 @@ export async function updateBookingStatus(
           wallet.total_earned = String(numericEarned + creditAmount);
           await wallet.save(opts as any);
 
-          const withdrawableAt = new Date(now.getTime() + HOURS_72);
+          const withdrawableAt = new Date(now.getTime() + WITHDRAWAL_LOCK_MS);
 
           await WalletTransaction.create(
             {
@@ -149,7 +157,7 @@ export async function updateBookingStatus(
       }
     }
     if (!transaction) {
-      const releaseAt = new Date(now.getTime() + HOURS_72);
+      const releaseAt = new Date(now.getTime() + WITHDRAWAL_LOCK_MS);
       await addFundReleaseJob(booking.id, releaseAt);
     }
 
